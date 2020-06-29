@@ -34,14 +34,13 @@ void sendthread(int nid)
 	//起始下标
 	int begin = (nid -1)*(cCount / tCount);
 	int end = (nid)*(cCount / tCount);
-	int count = 0;
 	for (int i = begin; i < end; i++)
 	{
 		client[i] = new Client();
 		client[i]->InitSocket();
 		if (client[i]->Connect("127.0.0.1", 8001))
 		{
-			cout << "Connect = " << ++count << endl;
+			cout << "Connect = " << i << endl;
 		}
 	}
 

@@ -65,6 +65,8 @@ private:
 	void Disconnect(ClientSocket * pclient);
 	//断开所有客户端，并终止服务器运行
 	void terminated();
+	//发送消息
+	int SendMsg(ClientSocket*client, MsgHeader*msg);
 	//接收数据
 	int RecvMsg(ClientSocket* pclient);
 	//响应网络消息
@@ -100,8 +102,6 @@ public:
 	void AddClientToCellServer(ClientSocket*client);
 	//消息计数
 	void MsgCount();
-	//发送消息
-	int SendMsg(ClientSocket*client,MsgHeader*msg);
 	//主运行函数
 	void Run();
 	//是否运行
@@ -116,10 +116,9 @@ public:
 	virtual void OnNetMsg(ClientSocket* pclient, MsgHeader *msg);
 private:
 	Socket *					_socket;		//socket与addr
-	std::list<ClientSocket*>	_client;		//客户端队列
-	std::vector<CellServer*>	_CellServer;	//小服务器队列
-	std::mutex					_mtx;			//客户端队列锁,因为OnLeave中其他线程操作了_client
+	std::vector<CellServer*>	_CellServer;	//子服务器队列
 	CELLTimestamp				_timer;			//高精度计时器
-	std::atomic_int				_recvcount;		//收包计数器
+	std::atomic_int				_recvcount;		//收包计数
+	std::atomic_int				_clientcount;	//客户端计数
 };
 

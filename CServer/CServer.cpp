@@ -54,8 +54,6 @@ INetEvent::~INetEvent()
 
 
 
-
-
 CellServer::CellServer(Socket *socket,INetEvent* pevent)
 	:_socket(socket), _pThread(NULL), _pevent(NULL)
 {
@@ -82,15 +80,17 @@ CellServer::~CellServer()
 	//清理剩余缓冲队列
 	for (auto &client : _clientbuf)
 	{
+		cout<<"in ~cellserver"<<endl;
 		Disconnect(client);
-		_pevent->OnLeave(client);
+		client = NULL;
 	}
 	_clientbuf.clear();
 	//清理剩余队列
 	for (auto &client : _client)
 	{
+		cout << "in ~cellserver" << endl;
 		Disconnect(client);
-		_pevent->OnLeave(client);
+		client = NULL;
 	}
 	_client.clear();
 }
@@ -123,7 +123,7 @@ void CellServer::OnRun()
 		{
 			setor.AddReadFd(client->GetSocket()->GetSocketFd());
 			//setor.AddWriteFd(client->GetSocket()->GetSocketFd());
-			//setor.AddExceptFd(client->GetSocket()->GetSocketFd());
+			setor.AddExceptFd(client->GetSocket()->GetSocketFd());
 		}
 		//开始选择
 		int ret = setor.Select();
@@ -145,7 +145,6 @@ void CellServer::OnRun()
 					if (relen <= 0)
 					{
 						//移除客户端
-						cout << "client<" << socket << ">已退出" << endl;
 						Disconnect((*client));
 						client = _client.erase(client);
 						continue;
@@ -158,20 +157,19 @@ void CellServer::OnRun()
 				//	//发送数据,响应客户端
 				//}
 				//如果客户端套接字异常
-				//if (setor.IsExceptSet((*client)->GetSocket()->GetSocketFd()))
-				//{
-				//	//移除客户端
-				//	cout << "client<" << (*client)->GetSocket()->GetSocketFd() << ">已退出" << endl;
-				//	Disconnect((*client));
-				//	client = _client.erase(client);
-				//	continue;
-				//}
+				if (setor.IsExceptSet(socket))
+				{
+					//移除客户端
+					Disconnect((*client));
+					client = _client.erase(client);
+					continue;
+				}
 				client++;
 			}
 		}
 		else if(ret < 0)
 		{
-			return;
+			_socket = NULL;
 		}
 	}
 	cout << "cellserver exit" << endl;
@@ -186,10 +184,8 @@ void CellServer::Disconnect(ClientSocket * pclient)
 {
 	if (pclient)
 	{
-		if (_pevent)
-		{
-			_pevent->OnLeave(pclient);
-		}
+		_pevent->OnLeave(pclient);
+		delete pclient;
 	}
 }
 
@@ -212,6 +208,11 @@ void CellServer::terminated()
 		client = NULL;
 	}
 	_clientbuf.clear();
+}
+
+int CellServer::SendMsg(ClientSocket * client, MsgHeader * msg)
+{
+	return send(client->GetSocket()->GetSocketFd(), (char*)msg, msg->length, 0);
 }
 
 void CellServer::Start()
@@ -279,7 +280,7 @@ void CellServer::AddClient(ClientSocket * pclient)
 }
 
 Server::Server()
-	:_socket(0),_recvcount(0)
+	:_socket(0),_recvcount(0), _clientcount(0)
 {
 	
 }
@@ -291,14 +292,7 @@ Server::~Server()
 		delete _socket;
 		_socket = NULL;
 	}
-	for (auto &client : _client)
-	{
-		if (client)
-		{
-			delete client;
-		}
-	}
-	_client.clear();
+
 	for (auto &cell : _CellServer)
 	{
 		if (cell)
@@ -371,12 +365,15 @@ void Server::Accept()
 	}
 	else
 	{
+		//新建一个socket对象
 		Socket *socket = new Socket(accSock, clientaddr);
 		if (socket)
 		{
+			//新建一个clientsocket对象
 			ClientSocket *pclient = new ClientSocket(socket);
 			if (pclient)
 			{
+				//将新加入的客户端添加到子服务器缓冲
 				AddClientToCellServer(pclient);
 			}
 			else
@@ -401,10 +398,6 @@ void Server::StartCell()
 void Server::AddClientToCellServer(ClientSocket * pclient)
 {
 	//将客户端加入到最小缓冲队列
-	_mtx.lock();
-	_client.push_back(pclient);
-	_mtx.unlock();
-
 	auto mincellserver = _CellServer[0];
 	for (auto &cellserver: _CellServer)
 	{
@@ -414,6 +407,7 @@ void Server::AddClientToCellServer(ClientSocket * pclient)
 		}
 	}
 	mincellserver->AddClient(pclient);
+	_clientcount++;
 }
 
 void Server::MsgCount()
@@ -421,9 +415,7 @@ void Server::MsgCount()
 	auto t = _timer.GetElapsedSecond();
 	if (t >= 1.0)
 	{
-		_mtx.lock();
-		cout << "timesegment<" << t << ">,client<" << _client.size() << ">,recvcount<" << (int)(_recvcount /t) << ">" << endl;
-		_mtx.unlock();
+		cout << "timesegment<" << t << ">,client<" << _clientcount << ">,recvcount<" << (int)(_recvcount /t) << ">" << endl;
 		_recvcount = 0;
 		_timer.Update();
 	}
@@ -481,12 +473,6 @@ void Server::terminated()
 	}
 }
 
-int Server::SendMsg(ClientSocket * client, MsgHeader * msg)
-{
-	int sendlen = send(client->GetSocket()->GetSocketFd(), (char*)msg, msg->length, 0);
-	return sendlen;
-}
-
 
 SOCKET Server::GetListenSocket() const
 {
@@ -496,21 +482,7 @@ SOCKET Server::GetListenSocket() const
 
 void Server::OnLeave(ClientSocket * pclient)
 {
-	if (pclient)
-	{
-		delete pclient;
-	}
-	lock_guard<mutex> lock(_mtx);
-	auto begin = _client.begin();
-	auto end = _client.end();
-	for (auto iter = begin; iter != end;iter++)
-	{
-		if (*iter == pclient)
-		{
-			_client.erase(iter);
-			break;
-		}
-	}
+	_clientcount--;
 }
 
 void Server::OnNetMsg(ClientSocket * pclient, MsgHeader * msg)
