@@ -486,16 +486,7 @@ int Server::SendMsg(ClientSocket * client, MsgHeader * msg)
 	int sendlen = send(client->GetSocket()->GetSocketFd(), (char*)msg, msg->length, 0);
 	return sendlen;
 }
-int Server::SendMsgToAll(MsgHeader * msg)
-{
-	int sendlen = 0;
-	lock_guard<mutex> lock(_mtx);
-	for (auto client : _client)
-	{
-		sendlen = send(client->GetSocket()->GetSocketFd(), (char*)msg, msg->length, 0);
-	}
-	return sendlen;
-}
+
 
 SOCKET Server::GetListenSocket() const
 {

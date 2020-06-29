@@ -102,8 +102,6 @@ public:
 	void MsgCount();
 	//发送消息
 	int SendMsg(ClientSocket*client,MsgHeader*msg);
-	//广播消息
-	int SendMsgToAll(MsgHeader*msg);
 	//主运行函数
 	void Run();
 	//是否运行
