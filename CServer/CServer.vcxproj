@@ -69,7 +69,18 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>C:\Users\JS\source\repos\Winsocket\Winsocket;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>C:\Users\JS\source\repos\Winsocket\Winsocket;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Users\JS\source\repos\Winsocket\Winsocket;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Users\JS\source\repos\Winsocket\Winsocket;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -118,14 +129,26 @@
     <ClCompile Include="..\Winsocket\CELLTimestamp.cpp" />
     <ClCompile Include="..\Winsocket\Msg.cpp" />
     <ClCompile Include="..\Winsocket\wsabase.cpp" />
+    <ClCompile Include="Alloctor.cpp" />
+    <ClCompile Include="CellServer.cpp" />
+    <ClCompile Include="CELLTask.cpp" />
+    <ClCompile Include="CELLClient.cpp" />
     <ClCompile Include="CServer.cpp" />
+    <ClCompile Include="INetEvent.cpp" />
+    <ClCompile Include="MemMgr.cpp" />
     <ClCompile Include="server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Winsocket\CELLTimestamp.h" />
     <ClInclude Include="..\Winsocket\Msg.h" />
     <ClInclude Include="..\Winsocket\wsabase.h" />
+    <ClInclude Include="Alloctor.h" />
+    <ClInclude Include="CellServer.h" />
+    <ClInclude Include="CELLTask.h" />
+    <ClInclude Include="CELLClient.h" />
     <ClInclude Include="CServer.h" />
+    <ClInclude Include="INetEvent.h" />
+    <ClInclude Include="MemMgr.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="HTTP响应.txt" />

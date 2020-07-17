@@ -1,28 +1,32 @@
 #pragma once
-#include"../Winsocket/wsabase.h"
-#include"../Winsocket/Msg.h"
 #include<mutex>
-class Client:public wsabase
+#include"wsabase.h"
+
+#define SERVER_HEART_TIME	5000
+struct MsgHeader;
+
+class Client:public wsabase,public Socket
 {
 public:
-	Client();
+	Client(unsigned int ver1 = 2, unsigned int ver2 = 2);
 	~Client();
-	bool InitSocket(int af = 2, int type = 1, int protocol = 6);
 	bool Connect(const char * ipaddr, unsigned int port);
 	void Run();
-
 	bool IsRun();
-	int SendMsg(MsgHeader*msg);
+	int SendMsg(MsgHeader *msg, int nlen);
 	int RecvMsg();
 	void Disconnect();
 private:
-	void HandleMsg(MsgHeader*msg);
-	void login(MsgHeader*msg);
-
+	//处理网络消息
+	void OnNetMsg(MsgHeader*msg);
+	//重置心跳时间
+	void ResetHeart();
+	//心跳检测
+	bool CheckHeart(time_t dt);
 private:
-	Socket *_socket;
-	char *_recvbuf;
-	char *_msgbuf;
-	int _lastpos;
+	char*	_msgbuf;		//接收消息缓冲区
+	int		_lastpos;		//接收消息缓冲区尾部位置
+	time_t	_oldTime;		//旧时间戳
+	time_t	_dtHeart;		//心跳时间
 };
 

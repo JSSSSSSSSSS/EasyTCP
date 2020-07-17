@@ -27,7 +27,25 @@
     <ClCompile Include="..\Winsocket\wsabase.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CELLTask.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="INetEvent.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CellServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MemMgr.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alloctor.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="..\Winsocket\CELLTimestamp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CELLClient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,7 +59,25 @@
     <ClInclude Include="..\Winsocket\wsabase.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CELLTask.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="INetEvent.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CellServer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MemMgr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alloctor.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="..\Winsocket\CELLTimestamp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CELLClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

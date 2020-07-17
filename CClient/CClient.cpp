@@ -1,14 +1,15 @@
-#include "CClient.h"
 #include<iostream>
 #include<assert.h>
+#include "CClient.h"
+#include"Msg.h"
+#include"CELLTimestamp.h"
+
 using namespace std;
 
-Client::Client()
-	:_socket(NULL),_recvbuf(NULL),_msgbuf(NULL), _lastpos(0)
+Client::Client(unsigned int ver1, unsigned int ver2)
+	:_msgbuf(NULL), _lastpos(0),_dtHeart(0),_oldTime(0)
 {
-	_recvbuf = new char[RECV_BUF_SIZE];
-	assert(_recvbuf != NULL);
-	_msgbuf = new char[RECV_BUF_SIZE*10];
+	_msgbuf = new char[RECV_BUF_SIZE];
 	assert(_msgbuf != NULL);
 }
 
@@ -19,98 +20,103 @@ Client::~Client()
 		delete _msgbuf;
 		_msgbuf = NULL;
 	}
-	if (_recvbuf)
-	{
-		delete _recvbuf;
-		_recvbuf = NULL;
-	}
-	if (_socket)
-	{
-		delete _socket;
-		_socket = NULL;
-	}
-}
-
-bool Client::InitSocket(int af, int type, int protocol)
-{
-	if (_socket)
-	{
-		delete _socket;
-		_socket = NULL;
-	}
-	_socket = new Socket();
-	if (!_socket)
-	{
-		return false;
-	}
-	return _socket->InitSocket(af, type, protocol);
 }
 
 bool Client::Connect(const char * ipaddr, unsigned int port)
 {
 	//m_addr.sin_family已经在InitSocket()中赋值
-	sockaddr_in addr;
-	addr.sin_family = _socket->GetAddr().sin_family;
-	addr.sin_addr.s_addr = inet_addr(ipaddr);
-	addr.sin_port = htons(port);
-	if (!_socket)
+	_addr.sin_addr.s_addr = inet_addr(ipaddr);
+	_addr.sin_port = htons(port);
+	if (_socketfd == INVALID_SOCKET)
 	{
 		cout << "you should call InitSocket() before Connect" << endl;
 		return false;
 	}
-	_socket->SetAddr(addr);
-	if (connect(_socket->GetSocketFd(), (sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR)
+	
+	if (connect(_socketfd, (sockaddr *)&_addr, sizeof(_addr)) == SOCKET_ERROR)
 	{
-		LOG("Connect failed!");
+		//LOG("Connect failed! ErrorCode = "<<GetLastError());
+		LOG(_socketfd << "Connect failed!");
 		return false;
 	}
-	return true;
+	{
+		//LOG(_socketfd << "connected!");
+		_oldTime = CELLTime::GetNowTimeMiliSec();
+		return true;
+	}
 }
 
 void Client::Run()
 {
-	Selector setor(1);
-	setor.AddExceptFd(_socket->GetSocketFd());
-	setor.AddWriteFd(_socket->GetSocketFd());
-	int ret = setor.Select();
-	if (ret > 0)
+	if (IsRun())
 	{
-		if (setor.IsWriteSet(_socket->GetSocketFd()))
+		fd_set readset;
+		FD_ZERO(&readset);
+		FD_SET(_socketfd, &readset);
+		timeval timeout = { 0,0 };
+		int ret = select(_socketfd + 1, &readset, 0, 0, &timeout);
+		if (ret > 0)
 		{
-			MSG_LOGIN login;
-			strcpy(login.username, "jiangsen");
-			strcpy(login.password, "123456789");
-			SendMsg(&login);
+			if (FD_ISSET(_socketfd, &readset))
+			{
+				int relen = RecvMsg();
+				//如果接收到EOF
+				if (relen <= 0)
+				{
+					//cout << "recv error! errorcode = "<<GetLastError() << endl;
+					cout << "disconnect from server!" << endl;
+					Disconnect();
+					return;
+				}
+				else
+				{
+					ResetHeart();
+				}
+			}
 		}
-		if (setor.IsExceptSet(_socket->GetSocketFd()))
+		//对服务器进行心跳检测
+		time_t dt = CELLTime::GetNowTimeMiliSec() - _oldTime;
+		if (!CheckHeart(dt))
 		{
-			cout << "服务器断开连接" << endl;
-			Disconnect();
+			MSG_HEART heart;
+			SendMsg(&heart, heart.length);
 		}
+		//更新旧时间戳
+		_oldTime = CELLTime::GetNowTimeMiliSec();
 	}
 }
 
 bool Client::IsRun()
 {
-	return _socket;
+	return (_socketfd !=INVALID_SOCKET);
 }
 
-int Client::SendMsg(MsgHeader*msg)
+int Client::SendMsg(MsgHeader *msg, int nlen)
 {
-	int sendlen = send(_socket->GetSocketFd(),(char*)msg, msg->length,0);
-	return sendlen;
+	int ret = SOCKET_ERROR;
+	if (IsRun() && msg)
+	{
+		ret = send(_socketfd, (char*)msg, nlen, 0);
+		if (ret == SOCKET_ERROR)
+		{
+			Disconnect();
+		}
+	}
+	return ret;
 }
 
 int Client::RecvMsg()
 {
+	//直接使用大缓冲区
+	char* recvbuf = _msgbuf + _lastpos;
 	//一次性接收足够多的数据
-	int recvlen = recv(_socket->GetSocketFd(), _recvbuf, RECV_BUF_SIZE, 0);
+	int recvlen = recv(_socketfd, recvbuf, (RECV_BUF_SIZE)- _lastpos, 0);
 	if (recvlen <= 0)
 	{
 		return recvlen;
 	}
 	//拷贝到缓冲区
-	memcpy(_msgbuf+ _lastpos, _recvbuf, recvlen);
+	//memcpy(_msgbuf+ _lastpos, _recvbuf, recvlen);
 	//更新缓冲区尾部位置
 	_lastpos += recvlen;
 	//判断缓冲区中是否足够一个消息头的长度
@@ -123,7 +129,7 @@ int Client::RecvMsg()
 		if (_lastpos >= len)
 		{
 			//如果满足就处理这个消息
-			HandleMsg(header);
+			OnNetMsg(header);
 			//计算剩余缓冲区大小
 			int nsize = _lastpos - len;
 			//将缓冲区数据前移
@@ -131,42 +137,56 @@ int Client::RecvMsg()
 			//更新缓冲区尾部指针
 			_lastpos = nsize;
 		}
+		else
+		{
+			//消息不足，退出循环（这个很重要）
+			break;
+		}
 	}
 	return recvlen;
 }
 
 
-void Client::HandleMsg(MsgHeader*msg)
+void Client::OnNetMsg(MsgHeader*msg)
 {
 	switch (msg->type)
 	{
-		case MT_LOGIN:login(msg); break;
+		case MT_LOGINRE: break; 
 	}
+}
+
+void Client::ResetHeart()
+{
+	_dtHeart = 0;
+}
+
+bool Client::CheckHeart(time_t dt)
+{
+	_dtHeart += dt;
+	if (_dtHeart > SERVER_HEART_TIME)
+	{
+		printf("server is likely disconnected !");
+		return false;
+	}
+	return true;
 }
 
 void Client::Disconnect()
 {
+	//关闭套接字
+	if (_socketfd != INVALID_SOCKET)
+	{
+		shutdown(_socketfd, SD_BOTH);
+		closesocket(_socketfd);
+		_socketfd = INVALID_SOCKET;
+	}
+	//清空服务器地址结构体
+	_addr = { 0 };
+	//释放缓冲区
 	if (_msgbuf)
 	{
 		delete _msgbuf;
 		_msgbuf = NULL;
 	}
-	if (_recvbuf)
-	{
-		delete _recvbuf;
-		_recvbuf = NULL;
-	}
-	if (_socket)
-	{
-		delete _socket;
-		_socket = NULL;
-	}
 }
 
-void Client::login(MsgHeader* msg)
-{
-	MSG_LOGIN *info = reinterpret_cast<MSG_LOGIN*>(msg);
-
-	/*std::cout << info->username << std::endl;
-	std::cout << info->password << std::endl;*/
-}

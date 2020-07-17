@@ -1,5 +1,11 @@
 #include "CELLTimestamp.h"
 
+time_t CELLTime::GetNowTimeMiliSec()
+{
+	return duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+}
+
+
 
 CELLTimestamp::CELLTimestamp()
 {
@@ -30,3 +36,5 @@ double CELLTimestamp::GetElapsedMicroSec()
 {
 	return duration_cast<microseconds>(high_resolution_clock::now() - _begin).count();
 }
+
+

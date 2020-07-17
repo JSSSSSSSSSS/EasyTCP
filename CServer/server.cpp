@@ -2,8 +2,8 @@
 #include<fstream>
 #include<time.h>
 #include<thread>
-#include"../Winsocket/Msg.h"
-#include"../Winsocket/wsabase.h"
+#include"Alloctor.h"
+#include"Msg.h"
 #include"CServer.h"
 
 using namespace std;
@@ -112,7 +112,7 @@ void input(Server*server)
 	while (g_ret)
 	{
 		char inputbuf[4096] = { 0 };
-		cin >> inputbuf;
+		scanf("%s", inputbuf);
 
 		if (!strcmp(inputbuf, "exit"))
 		{
@@ -121,10 +121,10 @@ void input(Server*server)
 		}
 		else
 		{
-			cout << "不支持的命令" << endl;
+			cout << "command not found!" << endl;
 		}
 	}
-	cout << "输入线程退出" << endl;
+	cout << "input thread exit!" << endl;
 }
 void test_server()
 {
@@ -144,20 +144,28 @@ void test_server()
 		cout << "Listen failed!"<< endl;
 		return;
 	}
+	//开启子服务器 4线程
+	server.StartCell(4);
+
 	thread t(input, &server);
 	while (g_ret)
 	{
 		server.Run();
 	}
+	server.Close();
 	t.join();
 }
+
 int main()
 {
 	//HTTP();
 	test_server();
-	//test_for();
-	
-	system("pause");
+	//test_mem();
+
+	/*std::chrono::seconds sec(10);
+	std::this_thread::sleep_for(sec);*/
+	cout << "input a char to exit!" << endl;
+	getchar();
 	return 0;
 }
 

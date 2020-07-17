@@ -3,6 +3,17 @@
 #define _CELLTimestamp_
 #include<chrono>	//高精度时钟
 using namespace std::chrono;
+
+//时钟类
+class CELLTime
+{
+public:
+	//获取当前时间戳
+	static time_t GetNowTimeMiliSec();
+};
+
+
+//计时器类
 class CELLTimestamp
 {
 public:

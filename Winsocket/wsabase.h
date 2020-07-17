@@ -18,9 +18,7 @@
 	#define SOCKET			int
 	#define INVALID_SOCKET	(SOCKET)(~0)
 	#define SOCKET_ERROR	(-1) 
-	#define closesocket		close
-	#define sprintf_s		snprintf
-	#define sscanf_s		sscanf	
+	#define closesocket		close	
 
 	#define SD_RECEIVE      0x00
 	#define SD_SEND         0x01
@@ -28,6 +26,7 @@
 #endif
 
 #define RECV_BUF_SIZE	10240
+#define SEND_BUF_SIZE	10240
 #define WIN32_LEAN_AND_MEAN
 #define GetLastError	WSAGetLastError
 //定义一个打印日志的宏
@@ -47,7 +46,7 @@ public:
 	Socket(SOCKET socketfd, sockaddr_in addr = {0});
 	virtual ~Socket();
 	bool InitSocket(int af = AF_INET, int type = SOCK_STREAM, int protocol = IPPROTO_TCP);
-	SOCKET GetSocketFd()const;
+	SOCKET GetSocketfd()const;
 	sockaddr_in GetAddr()const;
 	void SetAddr(sockaddr_in addr);
 protected:
@@ -56,52 +55,6 @@ protected:
 	sockaddr_in _addr;
 };
 
-class Selector
-{
-public:
-	Selector();
-	Selector(long timeout);
-	~Selector();
+//int a = sizeof(Socket);	32
 
-public:
-	//清空全部集合
-	void ClearAll();
-	//清除某个读集合中的元素
-	void ClearReadSet(SOCKET s);
-	//清空读集合
-	void ClearReadSetAll();
-	//清除某个写集合中的元素
-	void ClearWriteSet(SOCKET s);
-	//清空写集合
-	void ClearWriteSetAll();
-	//清除某个异常集合中的元素
-	void ClearExceptSet(SOCKET s);
-	//清空异常集合
-	void ClearExceptSetAll();
-	//将socket加入到集合中
-	void AddReadFd(SOCKET s);
-	//将socket加入到集合中
-	void AddWriteFd(SOCKET s);
-	//将socket加入到集合中
-	void AddExceptFd(SOCKET s);
-	//进行选择
-	int Select();
-	//是否在读集合中
-	bool IsReadSet(SOCKET s);
-	//是否在写集合中
-	bool IsWriteSet(SOCKET s);
-	//是否在异常集合中
-	bool IsExceptSet(SOCKET s);
-	//设置超时时间，单位ms
-	void SetTimeout(long timeout);
-
-private:
-	fd_set *m_readset;
-	fd_set *m_writeset;
-	fd_set *m_exceptset;
-	timeval *m_timeout;
-	unsigned int _readmax;
-	unsigned int _writemax;
-	unsigned int _exceptmax;
-};
 #endif
