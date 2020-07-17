@@ -79,7 +79,12 @@ void Client::Run()
 		if (!CheckHeart(dt))
 		{
 			MSG_HEART heart;
-			SendMsg(&heart, heart.length);
+			int len = SendMsg(&heart, heart.length);
+			if (len <= 0)
+			{
+				//断开连接
+				Disconnect();
+			}
 		}
 		//更新旧时间戳
 		_oldTime = CELLTime::GetNowTimeMiliSec();
